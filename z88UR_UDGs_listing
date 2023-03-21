@@ -1,0 +1,406 @@
+   20 CLS
+   30 REM *********************************
+   40 REM *     The Royal Game of UR      *
+   50 REM *             Z88               *
+   60 REM *     by Mark Bennett 2022      *
+   70 REM *   Z88 UDGs by JBizzel 2023    *
+   80 REM * github.com/mark-bennett-uk/ur *
+   90 REM *********************************
+  100 CLEAR  : *NAME Royal Ur
+  110 REM def UDG 8*5 - 65-71 udg number.
+  120 VDU 1,138,ASC"=",65,158,179,161,173,173,161,179,158 : REM ++ EXTRA GO
+  130 VDU 1,138,ASC"=",64,128,140,158,146,146,158,140,128 : REM ## NORMAL PLAY
+  140 VDU 1,138,ASC"=",66,131,141,154,149,170,181,170,181 : REM p1 U/L
+  150 VDU 1,138,ASC"=",67,171,149,171,150,170,156,176,128 : REM p1 B/R
+  160 VDU 1,138,ASC"=",68,170,181,170,149,154,141,131,128 : REM p1 B/L
+  170 VDU 1,138,ASC"=",69,131,143,159,159,191,191,191,191 : REM p2 U/L
+  180 VDU 1,138,ASC"=",70,191,191,191,190,190,188,176,128: REM p2 B/R
+  190 VDU 1,138,ASC"=",71,191,191,191,159,159,143,131,128 : REM p2 B/L
+  200 REM   490 REM open a window
+  210 win=50:x=37:y=0:win_no=50:t=0 :PROC_wind :  win=31:x=1:y=0:win_no=49:t=131 :PROC_wind
+  230 PROC_initialise_program
+  240 PROC_initialise_arrays
+  250 ONERROR  VDU1,ASC"2",ASC"+",67 : VDU 1,127:END
+  260 REPEAT
+  265   PROC_bell
+  270   PROC_initialise_variables
+  280   PROC_initialise_engine
+  290   REM
+  300   PROC_initialise_board
+  310   PROC_draw_all_squares
+  320   PROC_draw_start_counters(1)
+  330   PROC_draw_start_counters(2)
+  331   VDU 1,50,72,50:REM WINDOW
+  332   VDU 1,50,71,ASC"+"
+  333   VDU1,50,71,43
+  334   REM
+  340   PROC_player_selection
+  350   VDU1,50,72,50:REM GREY WINDOW
+  360   VDU1,ASC"2",ASC"G",ASC"-"
+  370   VDU1,50,71,45
+  380   VDU1,50,72,49
+  390   REM
+  400   game_over = FALSE
+  410   REPEAT
+  420     turn_over = FALSE
+  430     REPEAT
+  440       PROC_roll_dice
+  450       PROC_clear_text_area(player)
+  460       PRINT TAB(0, (player * 3) - 2); "Player "; player; " rolled "; dice_roll;
+  470       PROC_get_possible_moves
+  480       IF dice_roll = 0 OR move_count = 0 THEN PROC_nvm_message ELSE PROC_player_make_move
+  490       IF move_count = 0 OR throw_again = 0 THEN turn_over = TRUE
+  500     UNTIL turn_over
+  510     IF player = 1 THEN player = 2 : not_player = 1 ELSE player = 1 : not_player = 2
+  520   UNTIL game_over
+  530   VDU1,ASC"2",ASC"+",67
+  540   PRINT TAB(0, 3); "Press enter to play again"
+  550   INPUT "or q to quit"; l$
+  560 UNTIL l$ = "q" OR l$ = "Q"
+  570 REM
+  580 DEF PROC_initialise_board
+  590 CLS
+  600 PROC_print_edge
+  610 VDU1,50,72,50:REM WINDOW
+  620 PRINT TAB(13, 0); "P1"
+  630 PRINT TAB(13, 7); "P2";
+  640 ENDPROC
+  650 DEF PROC_draw_square(p, s)
+  660 LOCAL offset
+  670 offset = -5 : REM 26
+  680 VDU1,50,72,50 : REM select game window
+  690 IF s >= 2 AND s <= 4 THEN VDU 1, ASC"3",ASC"@",32+((s*3)+ offset),32+((p*4)+ - 3):VDU 1,ASC"2",ASC"?",65 :VDU 1,ASC"2",ASC"?",65
+  700 IF s >= 2 AND s <= 4 THEN VDU 1, ASC"3",ASC"@",32+((s*3)+ offset),32+((p*4)+ - 2):VDU 1,ASC"2",ASC"?",65 :VDU 1,ASC"2",ASC"?",65
+  710 IF s = 5 THEN VDU 1, ASC"3",ASC"@",32+((s*3)+ offset),32+((p*4)+ - 3):VDU 1,ASC"2",ASC"?",64 :VDU 1,ASC"2",ASC"?",64
+  720 IF s = 5 THEN VDU 1, ASC"3",ASC"@",32+((s*3)+ offset),32+((p*4)+ - 2):VDU 1,ASC"2",ASC"?",64 :VDU 1,ASC"2",ASC"?",64
+  730 IF s >= 6 AND s <= 8 THEN VDU 1, ASC"3",ASC"@",32+((s*3)+ offset),32+3:VDU 1,ASC"2",ASC"?",65 :VDU 1,ASC"2",ASC"?",65
+  740 IF s >= 6 AND s <= 8 THEN VDU 1, ASC"3",ASC"@",32+((s*3)+ offset),32+4:VDU 1,ASC"2",ASC"?",65 :VDU 1,ASC"2",ASC"?",65
+  750 IF s = 9 THEN VDU 1, ASC"3",ASC"@",32+((s*3)+ offset),32+3:VDU 1,ASC"2",ASC"?",64 :VDU 1,ASC"2",ASC"?",64
+  760 IF s = 9 THEN VDU 1, ASC"3",ASC"@",32+((s*3)+ offset),32+4:VDU 1,ASC"2",ASC"?",64 :VDU 1,ASC"2",ASC"?",64
+  770 IF s >= 10 AND s <= 13 THEN VDU 1, ASC"3",ASC"@",32+((s*3)+ offset),32+3:VDU 1,ASC"2",ASC"?",65 :VDU 1,ASC"2",ASC"?",65
+  780 IF s >= 10 AND s <= 13 THEN VDU 1, ASC"3",ASC"@",32+((s*3)+ offset),32+4:VDU 1,ASC"2",ASC"?",65 :VDU 1,ASC"2",ASC"?",65
+  790 IF s = 14 THEN VDU 1, ASC"3",ASC"@",32+((s*3)+offset),32+((p*4)-3):VDU 1,ASC"*":VDU 1,ASC"+"
+  800 IF s = 14 THEN VDU 1, ASC"3",ASC"@",32+((s*3)+offset),32+((p*4)-2):VDU 1,ASC"+":VDU 1,ASC"*"
+  810 IF s = 15 THEN VDU 1, ASC"3",ASC"@",32+((s*3)+ offset),32+((p*4) - 3):VDU 1,ASC"2",ASC"?",64 :VDU 1,ASC"2",ASC"?",64
+  820 IF s = 15 THEN VDU 1, ASC"3",ASC"@",32+((s*3)+ offset),32+((p*4) - 2):VDU 1,ASC"2",ASC"?",64 :VDU 1,ASC"2",ASC"?",64
+  830 REM
+  840 VDU1,50,72,49 : REM select option window
+  850 ENDPROC
+  860 DEF PROC_draw_all_squares
+  870 FOR i = 2 TO 15
+  880   PROC_draw_square(2, i)
+  890 NEXT i
+  900 FOR i = 2 TO 5
+  910   PROC_draw_square(1, i)
+  920 NEXT i
+  930 FOR i = 14 TO 15
+  940   PROC_draw_square(1, i)
+  950 NEXT i
+  960 ENDPROC
+  970 DEF PROC_board_make_move
+  980 LOCAL v, x, y
+  990 square = t((selected_move * 2) - 1)
+ 1000 IF square = 1 THEN PROC_draw_start_counters(player)
+ 1010 IF square > 1 AND square < 16 THEN PROC_draw_square(player, square)
+ 1020 v = t(selected_move * 2)
+ 1030 IF v = 16 THEN PROC_draw_end_counters
+ 1040 IF v >= 1 AND v <= 15 THEN PROC_player_draw_counter(v)
+ 1050 ENDPROC
+ 1060 DEF PROC_draw_start_counters(pos)
+ 1070 LOCAL x
+ 1080 x = 1
+ 1090 VDU1,50,72,50:REM WINDOW
+ 1100 FOR i = 1 TO 7
+ 1110   IF p(pos, i) = 1 THEN PRINT TAB(x, (pos - 1) * 7); i; : x = x + 1
+ 1120 NEXT i
+ 1130 PRINT TAB(x, (pos - 1) * 7); "-";
+ 1140 VDU1,50,72,49:REM WINDOW
+ 1150 ENDPROC
+ 1160 DEF PROC_draw_end_counters
+ 1170 LOCAL x
+ 1180 x = 68-31 :VDU1,50,72,50:REM WINDOW
+ 1190 FOR i = 1 TO 7
+ 1200   IF p(player, i) = 16 THEN PRINT TAB(x, (player - 1) * 7); i; : x = x + 1
+ 1210 NEXT i
+ 1220 VDU1,50,72,49:REM WINDOW
+ 1230 ENDPROC
+ 1240 DEF PROC_computer_move_selection
+ 1250 LOCAL from_pos, to_pos, biggest
+ 1260 PRINT TAB(0, (player * 3) - 1); "Thinking .";
+ 1270 FOR i = 1 TO 7
+ 1280   w(i) = -1
+ 1290   from_pos = t((i * 2) - 1)
+ 1300   to_pos = t(i * 2)
+ 1310   IF from_pos > -1 THEN PROC_move_from_pos
+ 1320 NEXT i
+ 1330 PRINT ""
+ 1340 biggest = w(1)
+ 1350 FOR i = 1 TO 7
+ 1360   IF w(i) > biggest THEN biggest = w(i)
+ 1370 NEXT i
+ 1380 selected_move = 1
+ 1390 FOR i = 1 TO 7
+ 1400   IF w(i) = biggest THEN selected_move = i
+ 1410 NEXT i
+ 1420 ENDPROC
+ 1430 DEF PROC_initialise_engine
+ 1440 LOCAL i
+ 1450 PRINT "Initialising"
+ 1460 b(1, 1) = 7
+ 1470 b(2, 1) = 7
+ 1480 FOR i = 2 TO 16
+ 1490   b(1, i) = 0
+ 1500   b(2, i) = 0
+ 1510 NEXT i
+ 1520 FOR i = 1 TO 7
+ 1530   p(1, i) = 1
+ 1540   p(2, i) = 1
+ 1550 NEXT i
+ 1560 ENDPROC
+ 1570 DEF PROC_roll_dice
+ 1580 dice_roll = 0
+ 1590 FOR i = 1 TO 4
+ 1600   dice_roll = dice_roll + RND(2) - 1
+ 1610 NEXT i
+ 1620 ENDPROC
+ 1630 DEF PROC_get_possible_moves
+ 1640 FOR i = 1 TO 14
+ 1650   t(i) = -1
+ 1660 NEXT i
+ 1670 move_count = 0
+ 1680 IF dice_roll > 0 THEN PROC_store_possible_move4
+ 1690 ENDPROC
+ 1700 DEF PROC_engine_make_move
+ 1710 LOCAL from_pos, to_pos
+ 1720 from_pos = t((selected_move * 2) - 1)
+ 1730 to_pos = t(selected_move * 2)
+ 1740 p(player, selected_move) = to_pos
+ 1750 b(player, from_pos) = b(player, from_pos) - 1
+ 1760 b(player, to_pos) = b(player, to_pos) + 1
+ 1770 IF b(not_player, to_pos) > 0 AND to_pos >= 6 AND to_pos <= 13 THEN PROC_engine_make_move2
+ 1780 throw_again = 0
+ 1790 IF to_pos = 5 OR to_pos = 9 OR to_pos = 15 THEN throw_again = 1 : PROC_bell
+ 1800 ENDPROC
+ 1810 DEF PROC_detect_win
+ 1820 IF b(player, 16) = 7 THEN win_detected = 1 ELSE win_detected = 0
+ 1830 ENDPROC
+ 1840 DEF PROC_initialise_program
+ 1850 CLS
+ 1860 ENDPROC
+ 1870 DEF PROC_initialise_arrays
+ 1880 DIM b(2, 16) : REM board position population
+ 1890 DIM p(2, 7) : REM counter positions p1 1=start 2-15=board 16=finished
+ 1900 DIM t(14) : REM possible moves [from:to] for each, -1 if invalid
+ 1910 DIM f(2) : REM player type 1 = human 2 = computer
+ 1920 DIM w(7) : REM weight = move preference for computer players
+ 1930 ENDPROC
+ 1940 DEF PROC_initialise_variables
+ 1950 throw_again = 0
+ 1960 player = 1
+ 1970 not_player = 2
+ 1980 move_count = 0
+ 1990 selected_move = 0
+ 2000 square = 0
+ 2010 game_over = FALSE
+ 2020 turn_over = FALSE
+ 2030 ENDPROC
+ 2040 DEF PROC_player_selection
+ 2050 LOCAL l$, done
+ 2060 done = FALSE
+ 2070 f(1) = 1
+ 2080 f(2) = 1
+ 2090 PROC_clear_text_area(player)
+ 2100 VDU1,ASC"2",ASC"+",67 : REM MAKESURE CURSOR IS ON
+ 2110 REPEAT
+ 2120   PRINT TAB(0, 1); "Player 1"
+ 2130   INPUT "Human or Computer"; l$
+ 2140   IF l$ = "H" OR l$ = "C" OR l$ = "h" OR l$ = "c" THEN done = TRUE
+ 2150 UNTIL done
+ 2160 IF l$ = "C" OR l$ = "c" THEN f(1) = 2
+ 2170 done = FALSE
+ 2180 REPEAT
+ 2190   PRINT TAB(0, 3); "Player 2"
+ 2200   INPUT "Human or Computer"; l$
+ 2210   IF l$ = "H" OR l$ = "C" OR l$ = "h" OR l$ = "c" THEN done = TRUE
+ 2220 UNTIL done
+ 2230 IF l$ = "C" OR l$ = "c" THEN f(2) = 2
+ 2240 VDU1,ASC"2",ASC"-",67 : REM MAKESURE CURSOR IS OFF
+ 2250 ENDPROC
+ 2260 DEF PROC_board_draw_counter(y, x, c)
+ 2270 LOCAL counter1$, counter2$
+ 2280 REM PRINT PLAYER COUNTERS
+ 2290 IF player = 1 THEN PROC_pp1 ELSE PROC_print_p2
+ 2300 ENDPROC
+ 2310 DEF PROC_clear_text_area(p)
+ 2320 VDU1,50,72,49:REM WINDOW
+ 2330 FOR i = (p * 3) - 2 TO p * 3
+ 2340   PRINT TAB(0, i); SPC(28);
+ 2350 NEXT i
+ 2360 ENDPROC
+ 2370 DEF PROC_nvm_message
+ 2380 PRINT TAB(0, (player * 3)-1); "No valid moves";
+ 2390 ENDPROC
+ 2400 DEF PROC_player_make_move
+ 2410 IF f(player) = 2 THEN PROC_player_computer_move ELSE PROC_player_human_move
+ 2420 PROC_engine_make_move
+ 2430 PROC_board_make_move
+ 2440 PROC_detect_win
+ 2450 IF win_detected = 1 THEN PROC_clear_text_area(1) : PROC_clear_text_area(2) : PROC_win_message
+ 2460 ENDPROC
+ 2470 DEF PROC_player_computer_move
+ 2480 PROC_computer_move_selection
+ 2490 PRINT TAB(0, (player * 3)-1); "Player "; player; " moves counter "; selected_move;
+ 2500 ENDPROC
+ 2510 DEF PROC_player_human_move
+ 2520 move_valid = FALSE
+ 2530 VDU1,ASC"2",ASC"+",67 : REM MAKESURE CURSOR IS ON
+ 2540 REPEAT
+ 2550   input_valid = FALSE
+ 2560   REPEAT
+ 2570     PRINT TAB(0, (player * 3) - 1); "Player "; player;
+ 2580     INPUT " counter to move"; l$
+ 2590     IF l$ <> "" THEN input_valid = TRUE
+ 2600   UNTIL input_valid
+ 2610   selected_move = VAL(l$)
+ 2620   IF selected_move >= 1 AND selected_move <= 7 THEN PROC_check_valid_move
+ 2630 UNTIL move_valid
+ 2640 VDU1,ASC"2",ASC"-",67 : REM MAKESURE CURSOR IS off
+ 2650 ENDPROC
+ 2660 DEF PROC_win_message
+ 2670 PRINT TAB(0, 1); "Player "; player; " wins";
+ 2680 game_over = TRUE
+ 2690 PROC_bell
+ 2700 ENDPROC
+ 2710 DEF PROC_check_valid_move
+ 2720 IF t((selected_move * 2) - 1) > -1 THEN move_valid = TRUE
+ 2730 ENDPROC
+ 2740 DEF PROC_player_draw_counter(v)
+ 2750 x = (3 * v) + 26
+ 2760 y = 1
+ 2770 IF player = 2 THEN y = 5
+ 2780 IF v > 5 AND v < 14 THEN y = 3
+ 2790 PROC_board_draw_counter(y, x, selected_move)
+ 2800 ENDPROC
+ 2810 DEF PROC_move_from_pos
+ 2820 w(i) = 0
+ 2830 IF from_pos > 5 AND from_pos < 14 AND from_pos <> 9 THEN w(i) = w(i) + 30
+ 2840 IF to_pos = 16 AND from_pos < 14 THEN w(i) = w(i) + 200
+ 2850 IF to_pos = 16 AND from_pos >= 14 THEN w(i) = w(i) + 100
+ 2860 IF to_pos = 15 THEN w(i) = w(i) + 50
+ 2870 IF to_pos = 5 THEN w(i) = w(i) + 70
+ 2880 IF to_pos = 14 THEN w(i) = w(i) + 40
+ 2890 FOR j = 1 TO 7
+ 2900   IF player = 1 AND from_pos > 5 AND p(2,j) >= (from_pos - 4) AND p(2, j) < from_pos THEN w(i) = w(i) + 20
+ 2910   IF player = 2 AND from_pos > 5 AND p(1,j) >= (from_pos - 4) AND p(1, j) < from_pos THEN w(i) = w(i) + 20
+ 2920   IF player = 1 AND w(i) > 20 AND to_pos > 5 AND p(2,j) > from_pos AND p(2, j) < to_pos THEN w(i) = w(i) - 20
+ 2930   IF player = 2 AND w(i) > 20 AND to_pos > 5 AND p(1,j) > from_pos AND p(1, j) < to_pos THEN w(i) = w(i) - 20
+ 2940 NEXT j
+ 2950 FOR j = 1 TO 7
+ 2960   IF to_pos > 5 AND to_pos < 14 AND p(1, j) = to_pos THEN w(i) = w(i) + 20
+ 2970   IF to_pos > 5 AND to_pos < 14 AND p(2, j) = to_pos THEN w(i) = w(i) + 20
+ 2980 NEXT j
+ 2990 w(i) = w(i) + RND(6) - 1
+ 3000 PRINT ".";
+ 3010 ENDPROC
+ 3020 DEF PROC_engine_make_move2
+ 3030 b(not_player, to_pos) = b(not_player, to_pos) - 1
+ 3040 b(not_player, 1) = b(not_player, 1) + 1
+ 3050 FOR i = 1 TO 7
+ 3060   IF p(not_player, i) = to_pos THEN p(not_player, i) = 1
+ 3070 NEXT i
+ 3080 PROC_draw_start_counters(not_player)
+ 3081 PROC_bell
+ 3090 ENDPROC
+ 3100 DEF PROC_store_possible_move
+ 3110 j = (i * 2) - 1
+ 3120 t(j) = p(player, i)
+ 3130 t(j + 1) = p(player, i) + dice_roll
+ 3140 move_count = move_count + 1
+ 3150 ENDPROC
+ 3160 DEF PROC_store_possible_move2
+ 3170 IF p(player, i) + dice_roll = 9 AND b(not_player, 9) > 0 THEN ELSE PROC_store_possible_move
+ 3180 ENDPROC
+ 3190 DEF PROC_store_possible_move3
+ 3200 IF b(player, p(player, i) + dice_roll) = 0 OR p(player, i) + dice_roll = 16 THEN PROC_store_possible_move2
+ 3210 ENDPROC
+ 3220 DEF PROC_store_possible_move4
+ 3230 FOR i = 1 TO 7
+ 3240   IF p(player, i) < 16 AND p(player, i) + dice_roll <= 16 THEN PROC_store_possible_move3
+ 3250 NEXT i
+ 3260 ENDPROC
+ 3270 DEF PROC_print_p2
+ 3280 VDU1,50,72,50:REM WINDOW
+ 3290 x=x-31
+ 3300 PRINT TAB(x+1, y);STR$(c)
+ 3310 VDU 1, ASC"3",ASC"@",32+x,32+y:VDU 1,ASC"2",ASC"?",69
+ 3320 VDU 1, ASC"3",ASC"@",32+x,32+(y+1):VDU 1,ASC"2",ASC"?",71 :VDU 1,ASC"2",ASC"?",70
+ 3330 VDU1,50,72,49:REM WINDOW
+ 3340 ENDPROC
+ 3350 DEF PROC_print_edge
+ 3360 VDU1,50,72,50:REM WINDOW
+ 3370 of = 32 : VDU 12: REM TOP EDGE / clear screen
+ 3380 VDU 1, ASC"3",ASC"@",of+0,of+0:VDU 1,ASC"2",ASC"*",ASC"C"
+ 3390 FOR I=1 TO 11 : VDU 1,ASC"2",ASC"*",ASC"E" : NEXT I   :REM HORIZONTAL
+ 3400 VDU 1,ASC"2",ASC"*",ASC"F"
+ 3410 VDU 1, ASC"3",ASC"@",of+12,of+1: VDU 1,ASC"2",ASC"*",ASC"J" : REM down
+ 3420 VDU 1, ASC"3",ASC"@",of+12,of+2:VDU 1,ASC"2",ASC"*",ASC"I"
+ 3430 FOR I=1 TO 24 : VDU 1,ASC"2",ASC"*",ASC"E" : NEXT I   :REM MAIN GAME RUN
+ 3440 VDU 1, ASC"3",ASC"@",of+36,of+2:VDU 1,ASC"2",ASC"*",ASC"L"
+ 3450 VDU 1, ASC"3",ASC"@",of+36,of+1:VDU 1,ASC"2",ASC"*",ASC"J":REM UP
+ 3460 VDU 1, ASC"3",ASC"@",of+36,of+0:VDU 1,ASC"2",ASC"*",ASC"C"  :REM UP RIGHT CORNER
+ 3470 FOR I=1 TO 5 : VDU 1,ASC"2",ASC"*",ASC"E" : NEXT I   :REM HORIZONTAL
+ 3480 VDU 1,ASC"2",ASC"*",ASC"F"
+ 3490 REM BOTTOM EDGE
+ 3500 VDU 1, ASC"3",ASC"@",of,of+7:VDU 1,ASC"2",ASC"*",ASC"I"
+ 3510 FOR I=1 TO 11 : VDU 1,ASC"2",ASC"*",ASC"E" : NEXT I   :REM HORIZONTAL
+ 3520 VDU 1,ASC"2",ASC"*",ASC"L"
+ 3530 VDU 1, ASC"3",ASC"@",of+12,of+6:VDU 1,ASC"2",ASC"*",ASC"J" : REM VERTICAL
+ 3540 VDU 1, ASC"3",ASC"@",of+12,of+5:VDU 1,ASC"2",ASC"*",ASC"C"
+ 3550 FOR I=1 TO 24 : VDU 1,ASC"2",ASC"*",ASC"E" : NEXT I   :REM MAIN GAME RUN
+ 3560 VDU 1, ASC"3",ASC"@",of+36,of+5:VDU 1,ASC"2",ASC"*",ASC"F"
+ 3570 VDU 1, ASC"3",ASC"@",of+36,of+6:VDU 1,ASC"2",ASC"*",ASC"J":REM DOWN
+ 3580 VDU 1, ASC"3",ASC"@",of+36,of+7:VDU 1,ASC"2",ASC"*",ASC"I"  :REM UP RIGHT CORNER
+ 3590 FOR I=1 TO 5 : VDU 1,ASC"2",ASC"*",ASC"E" : NEXT I   :REM HORIZONTAL
+ 3600 VDU 1,ASC"2",ASC"*",ASC"L"
+ 3610 FOR ey=1 TO 6 : VDU 1, ASC"3",ASC"@",of+0,of+ey: VDU 1,ASC"2",ASC"*",ASC"J" : NEXT ey
+ 3620 FOR ey=1 TO 6 : VDU 1, ASC"3",ASC"@",of+42,of+ey: VDU 1,ASC"2",ASC"*",ASC"J" : NEXT ey
+ 3630 VDU1,50,72,49:REM WINDOW 1
+ 3640 ENDPROC
+ 3650 DEF PROC_pp1
+ 3660 LOCAL i : i = 66
+ 3670 VDU1,50,72,50:REM WINDOW 2
+ 3680 x=x-31
+ 3690 PRINT TAB(x+1, y);STR$(c)
+ 3700 VDU 1, ASC"3",ASC"@",32+(x),32+y:VDU 1,ASC"2",ASC"?",i
+ 3710 VDU 1, ASC"3",ASC"@",32+x,32+(y+1):VDU 1,ASC"2",ASC"?",i+2 :VDU 1,ASC"2",ASC"?",i+1
+ 3720 VDU1,50,72,49:REM WINDOW 1
+ 3730 ENDPROC
+ 3740 DEF PROC_wind
+ 3750 REM with left and right bars and shelf brackets
+ 3760 REM starting at x=1, y=0 with reference to the
+ 3770 REM applications area.
+ 3780 VDU 1,55,35,win_no,32+x,32+y,32+win,32+8,t
+ 3790 REM Select window 1 (win_no) and reset its attributes (73 or 72 to keep attributes)
+ 3800 VDU 1,50,73,win_no
+ 3810 REM Set window attributes to Tiny Font,
+ 3820 REM Underline, Inverse Video
+ 3830 IF win_no = 49 THEN VDU 1,52,43,84,85,82
+ 3840 REM Centre the text in the window
+ 3850 IF win_no = 49 THEN VDU 1,50,74,67
+ 3860 REM Print window title in centre of first line
+ 3870 IF win_no = 49 THEN PRINT TAB(0,0);"The Royal Game of Ur";TAB(0,0);
+ 3880 REM Apply current toggles over next 40 characters
+ 3890 VDU 1,50,65,32+win
+ 3900 REM Redefine window to exclude top line (window
+ 3910 REM title area). This time, only left and right
+ 3920 REM side-bars are specified (129)
+ 3930 IF win_no = 49 THEN VDU 1,55,35,win_no,32+x,33,32+win,32+7,129
+ 3940 REM Select win_no and reset its attributes
+ 3950 VDU 1,50,73,win_no
+ 3960 REM Display the cursor and enable vertical
+ 3970 REM scrolling
+ 3980 REM VDU 1,51,43,67,83
+ 3990 ENDPROC
+ 4000 DEF PROC_bell
+ 4010 VDU1,52,33,43,33,33
+ 4020 ENDPROC
